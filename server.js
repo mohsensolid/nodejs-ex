@@ -10,12 +10,18 @@ var jwt = require('jwt-simple');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
+var ioa = require('socket.io').listen(server,
+{ origins: 'http://fruitadministrator-fruitbackend.44fs.preview.openshiftapps.com/',
+port: 8000,
+ transports: ["websocket"]});
+
 var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
     mongoURLLabel = "";
 var server_ip_address = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 // var port = process.env.PORT || 5000 ;
+//  var socket = io.connect('http://fruitadministrator-fruitbackend.44fs.preview.openshiftapps.com',{'forceNew':true });
 
 var db = mongoose.connect('mongodb://mohsen:mohsen@ds139715.mlab.com:39715/myfirstdb');
 
