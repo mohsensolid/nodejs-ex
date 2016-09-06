@@ -11,7 +11,7 @@ var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 var ioa = require('socket.io').listen(server,
-{ origins: 'http://fruitadministrator-fruitbackend.44fs.preview.openshiftapps.com/',
+{ origins: 'http://fruitadministrator-fruitbackend.44fs.preview.openshiftapps.com',
 port: 8000,
  transports: ["websocket"]});
 
