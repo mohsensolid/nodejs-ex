@@ -1,107 +1,108 @@
-//  OpenShift sample Node application
 var express = require('express'),
-    fs      = require('fs'),
-    app     = express(),
-    eps     = require('ejs'),
-    morgan  = require('morgan');
-    
-Object.assign=require('object-assign')
+    mongoose = require('mongoose'),
+    bodyParser = require('body-parser');
+var passport = require('passport');
+var session = require('express-session');
+var cookieParser = require('cookie-parser');
+var auth = require('basic-auth');
+var jwt = require('jwt-simple');
 
-app.engine('html', require('ejs').renderFile);
-app.use(morgan('combined'))
+var app = express();
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
+var server_port = process.env.OPENSHIFT_NODEJS_PORT || 5000;
+var server_ip_address = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+// var port = process.env.PORT || 5000 ;
 
-var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
-    ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
-    mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
-    mongoURLLabel = "";
+var db = mongoose.connect('mongodb://mohsen:mohsen@ds139715.mlab.com:39715/myfirstdb');
 
-if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
-  var mongoServiceName = process.env.DATABASE_SERVICE_NAME.toUpperCase(),
-      mongoHost = process.env[mongoServiceName + '_SERVICE_HOST'],
-      mongoPort = process.env[mongoServiceName + '_SERVICE_PORT'],
-      mongoDatabase = process.env[mongoServiceName + '_DATABASE'],
-      mongoPassword = process.env[mongoServiceName + '_PASSWORD']
-      mongoUser = process.env[mongoServiceName + '_USER'];
+var Book = require('./models/bookModels.js');
+var Furit = require('./models/furit.js');
+var Order = require('./models/orderModel.js');
+var User = require('./models/userModels.js');
+var UserRequest = require ('./models/userRequestModel.js');
+var Message = require('./models/messageModels.js');
 
-  if (mongoHost && mongoPort && mongoDatabase) {
-    mongoURLLabel = mongoURL = 'mongodb://';
-    if (mongoUser && mongoPassword) {
-      mongoURL += mongoUser + ':' + mongoPassword + '@';
+
+
+app.use(bodyParser.urlencoded({ extended :true}));
+app.use(bodyParser.json());
+app.use(cookieParser());
+
+require('./config/passport.js')(app);
+
+userRouter = require('./routes/UserRouter.js')(User);
+app.use('/api/users',userRouter);
+
+app.get('/',function(req,res) {
+    res.send('Hello To My Api');
+});
+
+userRequestRouter = require('./routes/UserRequestRouter.js')(UserRequest);
+app.use('/api/request',userRequestRouter);
+
+
+app.use(function(req, res, next) {
+
+  // check header or url parameters or post parameters for token
+  var token = req.body.token || req.query.token || req.headers['x-access-token'];
+
+  // decode token
+  if (token) {
+        try {
+    var decoded = jwt.decode(token, 'secret');
+        req.decoded = decoded; 
+            next();
+
+  } catch (err) {
+      res.json({ success: false, message: 'Failed to authenticate token.' });
     }
-    // Provide UI label that excludes user id and pw
-    mongoURLLabel += mongoHost + ':' + mongoPort + '/' + mongoDatabase;
-    mongoURL += mongoHost + ':' +  mongoPort + '/' + mongoDatabase;
-
-  }
+} 
+else
+{
+    res.json({success:false,message:'Token not Provided!'});
 }
-var db = null,
-    dbDetails = new Object();
-
-var initDb = function(callback) {
-  if (mongoURL == null) return;
-
-  var mongodb = require('mongodb');
-  if (mongodb == null) return;
-
-  mongodb.connect(mongoURL, function(err, conn) {
-    if (err) {
-      callback(err);
-      return;
-    }
-
-    db = conn;
-    dbDetails.databaseName = db.databaseName;
-    dbDetails.url = mongoURLLabel;
-    dbDetails.type = 'MongoDB';
-
-    console.log('Connected to MongoDB at: %s', mongoURL);
-  });
-};
-
-app.get('/', function (req, res) {
-  // try to initialize the db on every request if it's not already
-  // initialized.
-  if (!db) {
-    initDb(function(err){});
-  }
-  if (db) {
-    var col = db.collection('counts');
-    // Create a document with request IP and current time of request
-    col.insert({ip: req.ip, date: Date.now()});
-    col.count(function(err, count){
-      res.render('index.html', { pageCountMessage : count, dbInfo: dbDetails });
-    });
-  } else {
-    res.render('index.html', { pageCountMessage : null});
-  }
 });
 
-app.get('/pagecount', function (req, res) {
-  // try to initialize the db on every request if it's not already
-  // initialized.
-  if (!db) {
-    initDb(function(err){});
-  }
-  if (db) {
-    db.collection('counts').count(function(err, count ){
-      res.send('{ pageCount: ' + count + '}');
-    });
-  } else {
-    res.send('{ pageCount: -1 }');
-  }
+    // verifies secret and checks exp
+    //  var decoded = jwt.decode(token, 'secret');    
+    //    console.log(decoded);
+    //   if (decoded===null) {
+    //      res.json({ success: false, message: 'Failed to authenticate token.' });    
+    //   } else {
+    //     // if everything is good, save to request for use in other routes
+    //     req.decoded = decoded;    
+    //     next();
+    //   }
+
+
+booksRouter = require('./routes/BookRouter.js')(Book);
+furitRouter = require('./routes/FuritRouter.js')(Furit);
+orderRouter = require('./routes/OrderRouter.js')(Order,User);
+messageRouter = require('./routes/MessageRouter.js')(Message);
+
+
+
+// app.use(function (req, res,next) {
+//   var credentials = auth(req);
+
+//   if (!credentials || credentials.name !== 'john' || credentials.pass !== 'secret') {
+//     res.statusCode = 401;
+//     res.setHeader('WWW-Authenticate', 'Basic realm="example"');
+//     // res.redirect('/');
+//     res.end('Access denied');
+//   } else {
+//     // res.end('Access granted');
+//     next();
+//   }
+// });
+
+app.use('/api/books',booksRouter);
+app.use('/api/furits',furitRouter);
+app.use('/api/orders',orderRouter);
+app.use('/api/messages',messageRouter);
+
+io = require('./io/io.js')(io);
+server.listen(server_port,server_ip_address, function(){
+    console.log('Server Start'+server_ip_address+' ON Port '+server_port);
 });
-
-// error handling
-app.use(function(err, req, res, next){
-  console.error(err.stack);
-  res.status(500).send('Something bad happened!');
-});
-
-initDb(function(err){
-  console.log('Error connecting to Mongo. Message:\n'+err);
-});
-
-app.listen(port, ip);
-console.log('Server running on http://%s:%s', ip, port);
-
-module.exports = app ;
