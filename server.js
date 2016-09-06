@@ -10,7 +10,10 @@ var jwt = require('jwt-simple');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
-var server_port = process.env.OPENSHIFT_NODEJS_PORT || 5000;
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
+    ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
+    mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
+    mongoURLLabel = "";
 var server_ip_address = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 // var port = process.env.PORT || 5000 ;
 
@@ -103,6 +106,6 @@ app.use('/api/orders',orderRouter);
 app.use('/api/messages',messageRouter);
 
 io = require('./io/io.js')(io);
-server.listen(server_port,server_ip_address, function(){
-    console.log('Server Start'+server_ip_address+' ON Port '+server_port);
+server.listen(port,ip, function(){
+    console.log('Server Start '+ip+' ON Port '+port);
 });
