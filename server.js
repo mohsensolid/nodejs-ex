@@ -44,7 +44,7 @@ userRouter = require('./routes/UserRouter.js')(User);
 app.use('/api/users',userRouter);
 
 app.get('/',function(req,res) {
-    res.send('Hello To My Api Mohsen');
+    res.send('Hello To My Api');
 });
 
 userRequestRouter = require('./routes/UserRequestRouter.js')(UserRequest);
@@ -111,7 +111,7 @@ app.use('/api/furits',furitRouter);
 app.use('/api/orders',orderRouter);
 app.use('/api/messages',messageRouter);
 
-io = require('./io/io.js')(io);
+io = require('./io/io.js')(ioa);
 server.listen(port,ip, function(){
     console.log('Server Start '+ip+' ON Port '+port);
 });
